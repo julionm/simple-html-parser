@@ -1,5 +1,3 @@
-use std::env;
-
 use parser::process;
 
 mod parser;
@@ -23,7 +21,12 @@ fn main() {
 </html>
     ");
 
-    let (rest, html_as_nodes) = process(html);
-    
-    println!("the rest: {}", rest);
+    match process(html) {
+        Ok(_) => {
+            println!("Everything went Ok!");
+        }
+        Err(err) => {
+            println!("Error while trying to parse html!: {}", err);
+        }
+    }
 }

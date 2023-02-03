@@ -17,20 +17,19 @@ impl Node {
     }
 }
 
-// TODO change this to a Result
+// TODO add better error treatment
 // ? (the_rest_of_the_string, the nodes_processed)
-pub fn process(html: String) -> (String, Node) {
+pub fn process(html: String) -> Result<(String, Node), String> {
     let html = String::from(html.trim());
-    // ? maybe convert to a Vec<String>
     let mut lines: Vec<String> = html.lines().map(|line| String::from(line)).collect();
+
     println!("line0: {}", lines[0]);
+    // ! there's still problems happening with self-closing tags
 
     if lines[0].ends_with("/>") {
-        // self-closing tag
-
         let initial_node = html_to_node(lines.remove(0).as_str());
 
-        return (lines.join("\n"), initial_node);
+        return Ok((lines.join("\n"), initial_node));
     }
 
     let mut initial_node = html_to_node(lines.remove(0).as_str());
@@ -52,7 +51,7 @@ pub fn process(html: String) -> (String, Node) {
                 break;
             }
 
-            let (rest, new_node) = process(lines.join("\n").clone());
+            let (rest, new_node) = process(lines.join("\n").clone())?;
 
             lines = rest.lines().map(|line| String::from(line)).collect();
             children.push(new_node);
@@ -64,79 +63,8 @@ pub fn process(html: String) -> (String, Node) {
 
     initial_node.children = children;
 
-    (lines.join("\n"), initial_node)
+    Ok((lines.join("\n"), initial_node))
 }
-
-// ! consider a valid html line
-fn html_to_node2(line: &str) -> Node {
-    println!("html_to_node: {}", &line);
-    // TODO accept - and numbers for identifier names
-
-    // ? I'll use this example to illustrate how this function works
-    // ? line = " <a link="https://google.com"> "
-
-    // this is a line of an opening html tag
-    
-    // ? "<a link="https://google.com">"
-    let mut line = line.trim();
-    
-    // ? "a link="https://google.com">"
-    let chars = &line[0..].chars();
-    let mut identifier = String::new();
-
-    // processing identifier
-    // ? link="https://google.com">
-    while let Some(ch) = chars.next() {
-        if ch.is_whitespace() {
-            break;
-        }
-
-        identifier.push(ch);
-    }
-
-    // ? identifier = "a"
-
-    let rest: String = chars.collect();
-    let rest = rest.trim();
-
-    let exists_whitespace = line.find(' ');
-
-    // if exists whitespace, then it is a tag with attributes
-    return match exists_whitespace {
-        Some(index) => {
-            let mut node = Node {
-                name: String::from(&line[0..index]),
-                attributes: HashMap::new(),
-                children: Vec::new(),
-            };
-
-            let mut attributes: HashMap<String, String> = HashMap::new();
-
-            // removing the last >
-            // and only attributes are left
-            line = &line[index..line.len() - 1];
-
-            for attr in line.split(" ") {
-                // here it'll be only attributes
-                let attr_splited: Vec<&str> = attr.split("=").collect();
-
-                attributes.insert(String::from(attr_splited[0]), String::from(attr_splited[1]));
-            }
-
-            node.attributes = attributes;
-
-            node
-        },
-        None => 
-            Node {
-                name: String::from(&line[1..line.len()-1]), // <--- ERROR
-                attributes: HashMap::new(),
-                children: Vec::new(),
-            }
-            
-    }
-}
-
 
 // ! consider a valid html line
 fn html_to_node(line: &str) -> Node {
@@ -145,9 +73,9 @@ fn html_to_node(line: &str) -> Node {
 
     // ? removing opening <
     let line = &line[1..];
-    let chars = line.chars();
+    let mut chars = line.chars();
 
-    let identifier = String::new();
+    let mut identifier = String::new();
 
     let mut next_char = 'a';
 
@@ -167,12 +95,9 @@ fn html_to_node(line: &str) -> Node {
         return node;
     }
 
-    let rest: String = chars.collect();
-    let rest = rest.trim();
-    
     // ? try to think about attributes later?
 
-    let node = Node::new();
+    let mut node = Node::new();
     node.name = identifier;
 
     node
