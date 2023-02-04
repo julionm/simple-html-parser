@@ -66,6 +66,74 @@ pub fn process(html: String) -> Result<(String, Node), String> {
     Ok((lines.join("\n"), initial_node))
 }
 
+fn match_literal<'a>(expected: &'a str) -> impl Fn(&'a str) -> Result<&str, String> {
+    move |input: &str| match input.get(0..expected.len()) {
+        Some(next) if next == expected => Ok(&input[expected.len()..]),
+        _ => Err(format!("Couldn't match the result for {}", expected))
+    }
+}
+
+fn match_identifier(input: &str) -> Result<(&str, String), String> {
+
+    let mut matched = String::new();
+    let mut chars = input.chars();
+
+    match chars.next() {
+        Some(next) if next.is_alphabetic() => matched.push(next),
+        _ => return Err("Invalid identifier".into())
+    }
+
+    while let Some(next) = chars.next() {
+        if next.is_alphanumeric() || next == '-' {
+            matched.push(next)
+        } else {
+            break;
+        }
+    }
+
+    let next_index = matched.len();
+
+    Ok((&input[next_index..], matched))
+}
+
+fn match_attributes(line: &str) -> Result<(&str, HashMap<String, String>), String> {
+
+    // TODO write the method to match attributes
+
+    Ok((line, HashMap::new()))
+}
+
+fn html_to_node_with_combinators(line: &str) -> Result<Node, String> {
+
+    let match_opening_chevron = match_literal("<");
+    let match_closing_chevron = match_literal("/>");
+
+    let mut node = Node::new();
+    /*
+        Execution Chain:
+
+        match_opening_chevron -> identifier -> attributes -> match_closing_chevron
+    */
+    match_opening_chevron(line)
+    .and_then(
+        |rest| match_identifier(rest)
+    )
+    .and_then(
+        |(rest, name)| {
+            node.name = name;
+            match_attributes(rest)
+        } 
+    )
+    .and_then(
+        |(rest, attributes)| {
+            node.attributes = attributes;
+            match_closing_chevron(rest)
+        }
+    )?;
+
+    Ok(Node::new())
+}
+
 // ! consider a valid html line
 fn html_to_node(line: &str) -> Node {
 
