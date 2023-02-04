@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Node {
     pub name: String,
     pub attributes: HashMap<String, String>,
@@ -100,6 +100,13 @@ fn match_attributes(line: &str) -> Result<(&str, HashMap<String, String>), Strin
 
     // TODO write the method to match attributes
 
+    /*
+    
+        to match an attribute
+
+    
+    */
+
     Ok((line, HashMap::new()))
 }
 
@@ -109,11 +116,7 @@ fn html_to_node_with_combinators(line: &str) -> Result<Node, String> {
     let match_closing_chevron = match_literal("/>");
 
     let mut node = Node::new();
-    /*
-        Execution Chain:
 
-        match_opening_chevron -> identifier -> attributes -> match_closing_chevron
-    */
     match_opening_chevron(line)
     .and_then(
         |rest| match_identifier(rest)
@@ -174,14 +177,46 @@ fn html_to_node(line: &str) -> Node {
 #[cfg(test)]
 mod tests {
 
-    #[test]
-    fn test_line_processing() {
-        // create test for process_html_line()
-    }
+    use super::*;
 
     #[test]
     fn test_processing_simple_html() {
-        // TODO create test for simple html
+        let html = "<html>
+    <body>
+    </body>
+</html>";
+
+        let node = Node {
+            name: "html".into(),
+            attributes: HashMap::new(),
+            children: vec![
+                Node {
+                    name: "body".into(),
+                    attributes: HashMap::new(),
+                    children: Vec::new()
+                }
+            ]
+        };
+
+        assert_eq!(Ok(("".into(), node)), process(html.into()));
+    }
+
+    #[test]
+    fn test_match_literal() {
+        let parse_opening_chevron = match_literal("<");
+        let html_line = "<div/>";
+
+        assert_eq!(Ok("div/>"), parse_opening_chevron(html_line));
+    }
+
+    #[test]
+    fn test_match_identifier() {
+        let html_line = "div qlqrcoisa=\"outra-coisa\"";
+
+        assert_eq!(
+            Ok((" qlqrcoisa=\"outra-coisa\"", "div".into())),
+            match_identifier(html_line)
+        );
     }
 
 }
