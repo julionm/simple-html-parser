@@ -5,23 +5,24 @@ mod parser;
 fn main() {
     //let mut args = env::args();
 
-    let html = String::from("<html>
-    <head>
-        <style>
-        </style>
-    </head>
+    let html = "
+    <html>
+        <head>
+            <style>
+            </style>
+        </head>
     <body>
         <div>
             <button>
             </button>
         </div>
-        <button>
-        </button>
+        <button/>
+        <input/>
     </body>
-</html>
-    ");
+    </html>
+    ";
 
-    match process(html) {
+    match process(html.into()) {
         Ok(_) => {
             println!("Everything went Ok!");
         }
