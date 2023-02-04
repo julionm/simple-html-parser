@@ -48,8 +48,13 @@ pub fn process(html: String) -> Result<(String, Node), String> {
 
             if next_line.ends_with("/>") {
                 lines.remove(0);
+
                 // ! REMOVE THIS AFTER BETTER TESTS
                 println!("self-closing: {}", next_line);
+
+                // ? maybe I could optimize the code inside html_to_node
+                // ? as I trimmed the value here, I don't need to do that inside again
+                // ? AND.... maybe create another method specifically for self-closing tags?
                 children.push(html_to_node(next_line));
                 continue;
             }
@@ -59,8 +64,8 @@ pub fn process(html: String) -> Result<(String, Node), String> {
             lines = rest.lines().map(|line| String::from(line)).collect();
             children.push(new_node);
         } else {
-            // TODO rethink this later
-            println!("felt on else");
+            // ? this place is where the non-tags will fall
+            // ? I don't know what should I expect here except for strings
             break;
         }
     }
@@ -70,6 +75,7 @@ pub fn process(html: String) -> Result<(String, Node), String> {
     Ok((lines.join("\n"), initial_node))
 }
 
+// TODO rewrite this method
 fn match_literal<'a>(expected: &'a str) -> impl Fn(&'a str) -> Result<&str, String> {
     move |input: &str| match input.get(0..expected.len()) {
         Some(next) if next == expected => Ok(&input[expected.len()..]),
@@ -77,6 +83,7 @@ fn match_literal<'a>(expected: &'a str) -> impl Fn(&'a str) -> Result<&str, Stri
     }
 }
 
+// TODO rewrite this method
 fn match_identifier(input: &str) -> Result<(&str, String), String> {
 
     let mut matched = String::new();
@@ -144,9 +151,6 @@ fn html_to_node_with_combinators(line: &str) -> Result<Node, String> {
 // ! This method will be replaces by the new one using combinators
 // ! consider a valid html line
 fn html_to_node(line: &str) -> Node {
-
-    // ? MAYBE... it'll be better to use some parse combinators here
-
     // ? removing opening <
     let line = &line[1..];
     let mut chars = line.chars();
@@ -240,12 +244,22 @@ mod tests {
 
     #[test]
     fn test_match_identifier() {
-        let html_line = "div qlqrcoisa=\"outra-coisa\"";
+        let html_line = "div anything=\"another-thing\"";
 
         assert_eq!(
-            Ok((" qlqrcoisa=\"outra-coisa\"", "div".into())),
+            Ok((" anything=\"another-thing\"", "div".into())),
             match_identifier(html_line)
         );
+    }
+
+    #[test]
+    fn test_combinators_with_simple_html() {
+       let html_line = "<button />"; 
+    }
+
+    #[test]
+    fn test_combinators_with_complex_html() {
+        let html_line = "<img class=\"img-logo\" height=\"24px\" width=\"24px\" />";
     }
 
 }
