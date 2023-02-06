@@ -1,9 +1,26 @@
+use std::io::Result;
+
 use parser::process;
 
 mod parser;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     //let mut args = env::args();
+
+    let body = reqwest::get("https://www.wikipedia.org").await;
+
+    match body {
+        Ok(res) => {
+            let text = res.text().await;
+
+            match text {
+                Ok(v) => println!("{}", v),
+                Err(err) => panic!("{}", err)
+            } 
+        },
+        Err(err) => panic!("{}", err)
+    }
 
     let html = "
     <html>
@@ -30,4 +47,5 @@ fn main() {
             println!("Error while trying to parse html!: {}", err);
         }
     }
+
 }
