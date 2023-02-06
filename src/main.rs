@@ -1,51 +1,41 @@
-use std::io::Result;
+mod parser;
+mod utils;
 
+use std::{env, fs::File, io::Read};
 use parser::process;
 
-mod parser;
+fn main() {
+    let mut args = env::args();
+    args.next();
 
-#[tokio::main]
-async fn main() {
-    //let mut args = env::args();
+    let next_arg = args.next();
 
-    let body = reqwest::get("https://www.wikipedia.org").await;
+    match next_arg {
+        Some(path) => {
+            let file = File::open(path);
 
-    match body {
-        Ok(res) => {
-            let text = res.text().await;
+            let mut file = match file {
+                Ok(f) => f,
+                Err(err) => panic!("Error while opening the file: {}", err)
+            };
 
-            match text {
-                Ok(v) => println!("{}", v),
-                Err(err) => panic!("{}", err)
-            } 
+            let mut html: String = String::new();
+
+            match file.read_to_string(&mut html) {
+                Ok(_) => (),
+                Err(err) => panic!("I/O Error on file reading: {}", err)
+            }
+
+            match process(html) {
+                Ok(_) => (),
+                Err(err) => panic!("Error while trying to parse html!: {}", err)
+            }
         },
-        Err(err) => panic!("{}", err)
+        None => help()
     }
 
-    let html = "
-    <html>
-        <head>
-            <style>
-            </style>
-        </head>
-    <body>
-        <div>
-            <button>
-            </button>
-        </div>
-        <button/>
-        <input/>
-    </body>
-    </html>
-    ";
+}
 
-    match process(html.into()) {
-        Ok(_) => {
-            println!("Everything went Ok!");
-        }
-        Err(err) => {
-            println!("Error while trying to parse html!: {}", err);
-        }
-    }
-
+fn help() {
+    println!("Pass a valid file path like: app-name \"tmp/index.html\"");
 }

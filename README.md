@@ -1,9 +1,8 @@
-### wiki-cli
+### simple-html-parser
 
-this is a project study I'm doing to parser some html from wikipedia
-to maximize my time when remembering simple concepts.
+simple project to parser some html
 
-the usage of parsing combinators I took from the great tutorial wrote by [Bodil](https://github.com/bodil):
+the usage of parsing combinators I learned from the great tutorial wrote by [Bodil](https://github.com/bodil):
 https://bodil.lol/parser-combinators/#footnote_1
 I learned a lot reading his article, it's really awesome!
 
@@ -19,12 +18,9 @@ I learned a lot reading his article, it's really awesome!
 - [x] Parsing Comobinators: HTML Attributes
 - [x] Add Results to my functions to handle better errors
 - [ ] Find a way to ignore some tags 
+- [ ] Fix problem with meta tags
 
 #### Code related
 - [ ] Improve error handling, the error messages are not clear enough
-- [ ] Split the code
-- [ ] Improve performance on each method
-
-#### Feature related
-- [ ] Think about the command line part of the application
-- [ ] Decide how the integrations with wikipedia will happen - **DOING**
+- [x] Split the code in different modules
+- [ ] Improve performance on parsing methods
