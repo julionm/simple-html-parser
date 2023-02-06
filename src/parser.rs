@@ -23,16 +23,13 @@ pub fn process(html: String) -> Result<(String, Node), String> {
     let html = String::from(html.trim());
     let mut lines: Vec<String> = html.lines().map(|line| String::from(line)).collect();
 
-    // ! REMOVE THIS AFTER BETTER TESTS
-    println!("line0: {}", lines[0]);
-
     if lines[0].trim().ends_with("/>") {
-        let initial_node = html_to_node(lines.remove(0).as_str());
+        let initial_node = html_to_node(lines.remove(0).as_str())?;
 
         return Ok((lines.join("\n"), initial_node));
     }
 
-    let mut initial_node = html_to_node(lines.remove(0).as_str());
+    let mut initial_node = html_to_node(lines.remove(0).as_str())?;
     let mut children: Vec<Node> = Vec::new();
 
     loop {
@@ -49,13 +46,7 @@ pub fn process(html: String) -> Result<(String, Node), String> {
             if next_line.ends_with("/>") {
                 lines.remove(0);
 
-                // ! REMOVE THIS AFTER BETTER TESTS
-                println!("self-closing: {}", next_line);
-
-                // ? maybe I could optimize the code inside html_to_node
-                // ? as I trimmed the value here, I don't need to do that inside again
-                // ? AND.... maybe create another method specifically for self-closing tags?
-                children.push(html_to_node(next_line));
+                children.push(html_to_node(next_line)?);
                 continue;
             }
 
@@ -107,21 +98,69 @@ fn match_identifier(input: &str) -> Result<(&str, String), String> {
     Ok((&input[next_index..], matched))
 }
 
-fn match_attributes(line: &str) -> Result<(&str, HashMap<String, String>), String> {
+fn match_string(line: &str) -> Result<(&str, String), String> {
+    let line = line.trim();
+    let match_dbquotes = match_literal("\"");
 
-    // TODO write the method to match attributes
+    match_dbquotes(line).and_then(
+        |rest| {
+            let idx = rest.find("\"");
 
-    /*
-    
-        to match an attribute
+            let idx = match idx {
+                Some(idx) => idx,
+                None => return Err("Not closing attribute value".into())
+            };
+            let new_str = &rest[..idx];
 
-    
-    */
-
-    Ok((line, HashMap::new()))
+            Ok((&rest[idx+1..], new_str.into()))
+        }
+    )
 }
 
-fn html_to_node_with_combinators(line: &str) -> Result<Node, String> {
+fn match_attributes(line: &str) -> Result<(&str, HashMap<String, String>), String> {
+
+    let mut line = line.trim();
+    let mut attributes: HashMap<String, String> = HashMap::new();
+
+    let match_eq = match_literal("=");
+
+    loop {
+        if line == "/>" || line == ">" {
+            break;
+        }
+
+        let mut key = String::new();
+        let mut value = String::new();
+
+        line = match 
+            match_identifier(line)
+            .and_then(
+                |(rest, attr_name)| {
+                    key = attr_name;
+
+                    match_eq(rest)
+                }
+            ).and_then(
+                |rest| match_string(rest)
+            ).and_then(
+                |(rest, attr_value)| {
+                    value = attr_value;
+
+                    Ok(rest)
+                }
+            )
+        {
+            Ok(rest) => rest.trim_start().into(),
+            Err(err) => return Err(err)
+        };
+
+        attributes.insert(key, value);
+    }
+
+    Ok((line, attributes))
+}
+
+fn html_to_node(line: &str) -> Result<Node, String> {
 
     let match_opening_chevron = match_literal("<");
     let match_closing_chevron = match_literal("/>");
@@ -135,7 +174,7 @@ fn html_to_node_with_combinators(line: &str) -> Result<Node, String> {
     .and_then(
         |(rest, name)| {
             node.name = name;
-            match_attributes(rest)
+            match_attributes(rest) // * <-- to be finished
         } 
     )
     .and_then(
@@ -145,42 +184,7 @@ fn html_to_node_with_combinators(line: &str) -> Result<Node, String> {
         }
     )?;
 
-    Ok(Node::new())
-}
-
-// ! This method will be replaces by the new one using combinators
-// ! consider a valid html line
-fn html_to_node(line: &str) -> Node {
-    // ? removing opening <
-    let line = &line[1..];
-    let mut chars = line.chars();
-
-    let mut identifier = String::new();
-
-    let mut next_char = 'a';
-
-    while let Some(ch) = chars.next() {
-        if ch.is_alphanumeric() {
-            identifier.push(ch);
-        } else {
-            next_char = ch;
-            break;
-        }
-    }
-
-    if next_char == '/' || next_char == '>' {
-        let mut node = Node::new();
-        node.name = identifier;
-
-        return node;
-    }
-
-    // ? try to think about attributes later?
-
-    let mut node = Node::new();
-    node.name = identifier;
-
-    node
+    Ok(node)
 }
 
 #[cfg(test)]
@@ -191,9 +195,9 @@ mod tests {
     #[test]
     fn test_processing_simple_html() {
         let html = "<html>
-    <body>
-    </body>
-</html>";
+                            <body>
+                            </body>
+                        </html>";
 
         let node = Node {
             name: "html".into(),
@@ -243,6 +247,16 @@ mod tests {
     }
 
     #[test]
+    fn test_match_string() {
+        let test_str = "\"test test test \" anotherthing";
+
+        assert_eq!(
+            Ok((" anotherthing", String::from("test test test "))),
+            match_string(test_str)
+        );
+    }
+
+    #[test]
     fn test_match_identifier() {
         let html_line = "div anything=\"another-thing\"";
 
@@ -250,6 +264,39 @@ mod tests {
             Ok((" anything=\"another-thing\"", "div".into())),
             match_identifier(html_line)
         );
+    }
+
+    #[test]
+    fn test_match_attributes() {
+        let attrs_line = " class=\"class-test\" width=\"180\" height=\"180\" />";
+        let expected_map = HashMap::from([
+            (String::from("class"), String::from("class-test")),
+            (String::from("width"), String::from("180")),
+            (String::from("height"), String::from("180"))
+        ]);
+
+        assert_eq!(Ok(("/>", expected_map)), match_attributes(attrs_line));
+    }
+
+    #[test]
+    fn test_process_html_line() {
+        let html_line = "<div class=\"container flex\" width=\"180\" height=\"100\" />";
+        let attrs = HashMap::from([
+            (String::from("class"), String::from("container flex")),
+            (String::from("width"), String::from("180")),
+            (String::from("height"), String::from("100"))
+        ]);
+        let node = Node {
+            name: "div".into(),
+            attributes: attrs,
+            children: Vec::new()
+        };
+
+        assert_eq!(
+            Ok(node),
+            html_to_node(html_line)
+        )
+
     }
 
     #[test]
