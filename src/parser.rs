@@ -17,8 +17,6 @@ impl Node {
     }
 }
 
-// TODO add better error treatment
-// ? (the_rest_of_the_string, the nodes_processed)
 pub fn process(html: String) -> Result<(String, Node), String> {
     let html = String::from(html.trim());
     let mut lines: Vec<String> = html.lines().map(|line| String::from(line)).collect();

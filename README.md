@@ -17,8 +17,7 @@ I learned a lot reading his article, it's really awesome!
 - [x] Fix problems with self-closing tags
 - [x] Parsing Comobinators: HTML Attributes
 - [x] Add Results to my functions to handle better errors
-- [ ] Fix HTML processing - **DOING**
 - [ ] Improve error handling, the error messages are not clear enough
 - [ ] Do the command line part of the application
-- [ ] Decide how the integrations with wikipedia will happen
+- [ ] Decide how the integrations with wikipedia will happen - **DOING**
 - [ ] Improve performance on each method
