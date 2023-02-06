@@ -66,6 +66,19 @@ pub fn process(html: String) -> Result<(String, Node), String> {
     Ok((lines.join("\n"), initial_node))
 }
 
+// TODO write this method for fun
+fn or<'a, T, A>(parser1: T, parser2: T) -> impl FnOnce(&'a str) -> Result<A, String>
+where 
+    T: Fn(&'a str) -> Result<A, String>
+{
+    move |input: &str| {
+        match parser1(input) {
+            Ok(v) => Ok(v),
+            Err(_) => parser2(input)
+        }
+    }  
+}
+
 // TODO rewrite this method
 fn match_literal<'a>(expected: &'a str) -> impl Fn(&'a str) -> Result<&str, String> {
     move |input: &str| match input.get(0..expected.len()) {
@@ -162,12 +175,15 @@ fn match_attributes(line: &str) -> Result<(&str, HashMap<String, String>), Strin
 
 fn html_to_node(line: &str) -> Result<Node, String> {
 
-    let match_opening_chevron = match_literal("<");
-    let match_closing_chevron = match_literal("/>");
-
+    let match_opening = match_literal("<");
+    let match_end_of_line = 
+        or(
+            match_literal("/>"),
+            match_literal(">")
+        );
     let mut node = Node::new();
 
-    match_opening_chevron(line)
+    match_opening(line)
     .and_then(
         |rest| match_identifier(rest)
     )
@@ -180,7 +196,7 @@ fn html_to_node(line: &str) -> Result<Node, String> {
     .and_then(
         |(rest, attributes)| {
             node.attributes = attributes;
-            match_closing_chevron(rest)
+            match_end_of_line(rest)
         }
     )?;
 
@@ -300,13 +316,14 @@ mod tests {
     }
 
     #[test]
-    fn test_combinators_with_simple_html() {
-       let html_line = "<button />"; 
-    }
+    fn test_match_one_or_other() {
+        let match_end_of_line = or(
+            match_literal("/>"),
+            match_literal(">")
+        );
 
-    #[test]
-    fn test_combinators_with_complex_html() {
-        let html_line = "<img class=\"img-logo\" height=\"24px\" width=\"24px\" />";
-    }
+        let line = ">";
 
+        assert_eq!(Ok(""), match_end_of_line(line))
+    }
 }
